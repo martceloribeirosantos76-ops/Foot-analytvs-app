@@ -52,8 +52,8 @@ router.get("/matches/:id/analysis", async (req, res) => {
 
   if (!match) return res.status(404).json({ error: "Partida não encontrada" });
 
-  const home = match.statistics.find(s => s.teamId === match.homeTeamId);
-  const away = match.statistics.find(s => s.teamId === match.awayTeamId);
+  const home = match.statistics.find((s: typeof match.statistics[number]) => s.teamId === match.homeTeamId);
+const away = match.statistics.find((s: typeof match.statistics[number]) => s.teamId === match.awayTeamId););
 
   const toMetrics = (s: typeof home) => ({
     attack: Math.min(100, (s?.xg ?? 0) * 40 + (s?.shotsOnTarget ?? 0) * 5),
@@ -62,7 +62,7 @@ router.get("/matches/:id/analysis", async (req, res) => {
     form: 70,
     efficiency: 70,
     homeAway: 70
-  });
+  });⁸
 
   const homeScore = footScore(toMetrics(home));
   const awayScore = footScore(toMetrics(away));
