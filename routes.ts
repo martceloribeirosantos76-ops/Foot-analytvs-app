@@ -1,6 +1,6 @@
 import { Router } from "express";
-import { prisma } from "./database/prisma";
-import { footScore } from "./analysis/footScore";
+import { prisma } from "./prisma";
+import { footScore } from "./footScore";
 
 const router = Router();
 
