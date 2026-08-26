@@ -1,0 +1,666 @@
+﻿import 'package:flutter/material.dart';
+
+void main() {
+  runApp(const FootAnalyticsApp());
+}
+
+class FootAnalyticsApp extends StatelessWidget {
+  const FootAnalyticsApp({super.key});
+
+  @override
+  Widget build(BuildContext context) {
+    return MaterialApp(
+      debugShowCheckedModeBanner: false,
+      title: 'FOOT ANALYTICS',
+      theme: ThemeData(
+        brightness: Brightness.dark,
+        useMaterial3: true,
+        colorSchemeSeed: Colors.green,
+        scaffoldBackgroundColor: const Color(0xFF07110C),
+      ),
+      home: const HomePage(),
+    );
+  }
+}
+
+class HomePage extends StatelessWidget {
+  const HomePage({super.key});
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      appBar: AppBar(
+        title: const Text(
+          'FOOT ANALYTICS',
+          style: TextStyle(fontWeight: FontWeight.bold),
+        ),
+        actions: [
+          IconButton(
+            onPressed: () {},
+            icon: const Icon(Icons.notifications_none),
+          ),
+        ],
+      ),
+      body: ListView(
+        padding: const EdgeInsets.all(16),
+        children: [
+          const Text(
+            'Análises de Futebol',
+            style: TextStyle(
+              fontSize: 28,
+              fontWeight: FontWeight.bold,
+            ),
+          ),
+          const SizedBox(height: 6),
+          Text(
+            'Dados, estatísticas e mercados em um só lugar.',
+            style: TextStyle(color: Colors.grey.shade400),
+          ),
+          const SizedBox(height: 20),
+
+          _infoCard(
+            icon: Icons.cloud_off,
+            title: 'API ainda não conectada',
+            text:
+                'As probabilidades e estatísticas reais aparecerão quando a fonte de dados for conectada.',
+            color: Colors.orange,
+          ),
+
+          const SizedBox(height: 16),
+
+          _sectionTitle('PRINCIPAIS ÁREAS'),
+
+          _menuCard(
+            context,
+            icon: Icons.sports_soccer,
+            title: 'Jogos de hoje',
+            subtitle: 'Partidas, mercados e análise completa.',
+            page: const MatchesPage(),
+          ),
+
+          _menuCard(
+            context,
+            icon: Icons.groups,
+            title: 'Times',
+            subtitle: 'Forma, desempenho e métricas avançadas.',
+            page: const TeamsPage(),
+          ),
+
+          _menuCard(
+            context,
+            icon: Icons.person,
+            title: 'Jogadores',
+            subtitle: 'Estatísticas e comparação individual.',
+            page: const PlayersPage(),
+          ),
+
+          const SizedBox(height: 18),
+          _sectionTitle('MERCADOS DISPONÍVEIS'),
+
+          _marketGrid(context),
+        ],
+      ),
+    );
+  }
+
+  Widget _marketGrid(BuildContext context) {
+    final markets = [
+      ['1X2', Icons.sports_soccer],
+      ['Dupla chance', Icons.sync_alt],
+      ['Empate anula', Icons.shield],
+      ['Over / Under', Icons.bar_chart],
+      ['Ambos marcam', Icons.groups],
+      ['Escanteios', Icons.flag],
+      ['Cartões', Icons.style],
+      ['Finalizações', Icons.gps_fixed],
+      ['Chutes no gol', Icons.adjust],
+      ['Faltas', Icons.pan_tool],
+      ['Impedimentos', Icons.flag_outlined],
+      ['1º tempo', Icons.timer],
+      ['Handicap', Icons.exposure_plus_1],
+      ['Primeiro a marcar', Icons.emoji_events],
+    ];
+
+    return GridView.builder(
+      shrinkWrap: true,
+      physics: const NeverScrollableScrollPhysics(),
+      itemCount: markets.length,
+      gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+        crossAxisCount: 2,
+        crossAxisSpacing: 10,
+        mainAxisSpacing: 10,
+        childAspectRatio: 1.65,
+      ),
+      itemBuilder: (context, index) {
+        return Card(
+          child: Padding(
+            padding: const EdgeInsets.all(12),
+            child: Row(
+              children: [
+                Icon(
+                  markets[index][1] as IconData,
+                  color: Colors.greenAccent,
+                ),
+                const SizedBox(width: 10),
+                Expanded(
+                  child: Text(
+                    markets[index][0] as String,
+                    style: const TextStyle(
+                      fontWeight: FontWeight.w600,
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ),
+        );
+      },
+    );
+  }
+
+  Widget _sectionTitle(String text) {
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 10),
+      child: Text(
+        text,
+        style: TextStyle(
+          color: Colors.greenAccent.shade400,
+          fontWeight: FontWeight.bold,
+          letterSpacing: 1.2,
+        ),
+      ),
+    );
+  }
+
+  Widget _infoCard({
+    required IconData icon,
+    required String title,
+    required String text,
+    required Color color,
+  }) {
+    return Card(
+      color: color.withOpacity(.10),
+      child: Padding(
+        padding: const EdgeInsets.all(16),
+        child: Row(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Icon(icon, color: color),
+            const SizedBox(width: 12),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    title,
+                    style: TextStyle(
+                      color: color,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+                  const SizedBox(height: 5),
+                  Text(
+                    text,
+                    style: TextStyle(color: Colors.grey.shade300),
+                  ),
+                ],
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _menuCard(
+    BuildContext context, {
+    required IconData icon,
+    required String title,
+    required String subtitle,
+    required Widget page,
+  }) {
+    return Card(
+      child: ListTile(
+        leading: CircleAvatar(
+          backgroundColor: Colors.green.withOpacity(.15),
+          child: Icon(icon, color: Colors.greenAccent),
+        ),
+        title: Text(
+          title,
+          style: const TextStyle(fontWeight: FontWeight.bold),
+        ),
+        subtitle: Text(subtitle),
+        trailing: const Icon(Icons.chevron_right),
+        onTap: () {
+          Navigator.push(
+            context,
+            MaterialPageRoute(builder: (_) => page),
+          );
+        },
+      ),
+    );
+  }
+}
+
+class MatchesPage extends StatelessWidget {
+  const MatchesPage({super.key});
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      appBar: AppBar(title: const Text('Jogos de hoje')),
+      body: ListView(
+        padding: const EdgeInsets.all(16),
+        children: [
+          _statusCard(),
+          const SizedBox(height: 16),
+          _matchCard(
+            context,
+            'Time mandante',
+            'Time visitante',
+          ),
+          _matchCard(
+            context,
+            'Equipe A',
+            'Equipe B',
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _statusCard() {
+    return Card(
+      child: Padding(
+        padding: const EdgeInsets.all(16),
+        child: Row(
+          children: [
+            const Icon(Icons.cloud_off, color: Colors.orange),
+            const SizedBox(width: 12),
+            Expanded(
+              child: Text(
+                'Nenhum jogo real carregado. Conecte a API para obter partidas.',
+                style: TextStyle(color: Colors.grey.shade300),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _matchCard(
+    BuildContext context,
+    String home,
+    String away,
+  ) {
+    return Card(
+      child: ListTile(
+        leading: const Icon(
+          Icons.sports_soccer,
+          color: Colors.greenAccent,
+        ),
+        title: Text('$home  x  $away'),
+        subtitle: const Text('Análise disponível após conexão da API'),
+        trailing: const Icon(Icons.chevron_right),
+        onTap: () {
+          Navigator.push(
+            context,
+            MaterialPageRoute(
+              builder: (_) => MatchAnalysisPage(
+                home: home,
+                away: away,
+              ),
+            ),
+          );
+        },
+      ),
+    );
+  }
+}
+
+class MatchAnalysisPage extends StatelessWidget {
+  final String home;
+  final String away;
+
+  const MatchAnalysisPage({
+    super.key,
+    required this.home,
+    required this.away,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      appBar: AppBar(title: const Text('Análise da partida')),
+      body: ListView(
+        padding: const EdgeInsets.all(16),
+        children: [
+          _teamsHeader(),
+          const SizedBox(height: 20),
+
+          _footScore(),
+
+          const SizedBox(height: 20),
+
+          const MarketSection(
+            title: 'Resultado',
+            markets: [
+              '1X2',
+              'Dupla chance — 1X',
+              'Dupla chance — X2',
+              'Dupla chance — 12',
+              'Empate anula',
+            ],
+          ),
+
+          const MarketSection(
+            title: 'Gols',
+            markets: [
+              'Over / Under 0.5',
+              'Over / Under 1.5',
+              'Over / Under 2.5',
+              'Over / Under 3.5',
+              'Over / Under 4.5',
+              'Ambos marcam',
+            ],
+          ),
+
+          const MarketSection(
+            title: 'Estatísticas',
+            markets: [
+              'Escanteios Over',
+              'Cartões Over',
+              'Finalizações',
+              'Chutes no gol',
+              'Faltas',
+              'Impedimentos',
+            ],
+          ),
+
+          const MarketSection(
+            title: 'Mercados especiais',
+            markets: [
+              'Mercados do 1º tempo',
+              'Handicap',
+              'Primeiro a marcar',
+            ],
+          ),
+
+          const SizedBox(height: 10),
+
+          _realDataNotice(),
+        ],
+      ),
+    );
+  }
+
+  Widget _teamsHeader() {
+    return Card(
+      child: Padding(
+        padding: const EdgeInsets.all(20),
+        child: Row(
+          mainAxisAlignment: MainAxisAlignment.spaceAround,
+          children: [
+            Expanded(
+              child: Text(
+                home,
+                textAlign: TextAlign.center,
+                style: const TextStyle(
+                  fontSize: 18,
+                  fontWeight: FontWeight.bold,
+                ),
+              ),
+            ),
+            const Text(
+              'VS',
+              style: TextStyle(
+                color: Colors.greenAccent,
+                fontWeight: FontWeight.bold,
+              ),
+            ),
+            Expanded(
+              child: Text(
+                away,
+                textAlign: TextAlign.center,
+                style: const TextStyle(
+                  fontSize: 18,
+                  fontWeight: FontWeight.bold,
+                ),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _footScore() {
+    return Card(
+      color: Colors.green.withOpacity(.08),
+      child: Padding(
+        padding: const EdgeInsets.all(20),
+        child: Column(
+          children: [
+            const Text(
+              '🧠 FOOT SCORE',
+              style: TextStyle(
+                fontSize: 22,
+                fontWeight: FontWeight.bold,
+                color: Colors.greenAccent,
+              ),
+            ),
+            const SizedBox(height: 10),
+            const Text(
+              'Aguardando dados reais',
+              style: TextStyle(
+                fontSize: 18,
+                fontWeight: FontWeight.bold,
+              ),
+            ),
+            const SizedBox(height: 6),
+            Text(
+              'O score será calculado quando estatísticas reais estiverem disponíveis.',
+              textAlign: TextAlign.center,
+              style: TextStyle(color: Colors.grey.shade400),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _realDataNotice() {
+    return Card(
+      child: Padding(
+        padding: const EdgeInsets.all(16),
+        child: Column(
+          children: [
+            const Icon(
+              Icons.info_outline,
+              color: Colors.orange,
+              size: 30,
+            ),
+            const SizedBox(height: 8),
+            const Text(
+              'Probabilidades reais ainda não disponíveis',
+              textAlign: TextAlign.center,
+              style: TextStyle(
+                fontWeight: FontWeight.bold,
+                color: Colors.orange,
+              ),
+            ),
+            const SizedBox(height: 6),
+            Text(
+              'Nenhum percentual fictício será exibido como previsão. '
+              'Os mercados serão preenchidos com dados reais na próxima etapa.',
+              textAlign: TextAlign.center,
+              style: TextStyle(color: Colors.grey.shade400),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class MarketSection extends StatelessWidget {
+  final String title;
+  final List<String> markets;
+
+  const MarketSection({
+    super.key,
+    required this.title,
+    required this.markets,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Card(
+      margin: const EdgeInsets.only(bottom: 14),
+      child: ExpansionTile(
+        title: Text(
+          title,
+          style: const TextStyle(fontWeight: FontWeight.bold),
+        ),
+        children: markets.map((market) {
+          return ListTile(
+            leading: const Icon(
+              Icons.analytics_outlined,
+              color: Colors.greenAccent,
+            ),
+            title: Text(market),
+            trailing: const Text(
+              'API',
+              style: TextStyle(
+                color: Colors.orange,
+                fontWeight: FontWeight.bold,
+              ),
+            ),
+          );
+        }).toList(),
+      ),
+    );
+  }
+}
+
+class TeamsPage extends StatelessWidget {
+  const TeamsPage({super.key});
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      appBar: AppBar(title: const Text('Times')),
+      body: ListView(
+        padding: const EdgeInsets.all(16),
+        children: [
+          _teamFeature(
+            Icons.query_stats,
+            'Forma recente',
+            'Vitórias, empates, derrotas e desempenho.',
+          ),
+          _teamFeature(
+            Icons.sports_soccer,
+            'Ataque',
+            'Gols, finalizações e chutes no gol.',
+          ),
+          _teamFeature(
+            Icons.shield,
+            'Defesa',
+            'Gols sofridos, cartões e outras métricas.',
+          ),
+          _teamFeature(
+            Icons.flag,
+            'Escanteios',
+            'Média e comportamento em escanteios.',
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _teamFeature(
+    IconData icon,
+    String title,
+    String description,
+  ) {
+    return Card(
+      child: ListTile(
+        leading: Icon(icon, color: Colors.greenAccent),
+        title: Text(title),
+        subtitle: Text(description),
+        trailing: const Text(
+          'API',
+          style: TextStyle(color: Colors.orange),
+        ),
+      ),
+    );
+  }
+}
+
+class PlayersPage extends StatelessWidget {
+  const PlayersPage({super.key});
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      appBar: AppBar(title: const Text('Jogadores')),
+      body: ListView(
+        padding: const EdgeInsets.all(16),
+        children: [
+          const Card(
+            child: Padding(
+              padding: EdgeInsets.all(18),
+              child: Column(
+                children: [
+                  Icon(
+                    Icons.person_search,
+                    size: 45,
+                    color: Colors.greenAccent,
+                  ),
+                  SizedBox(height: 10),
+                  Text(
+                    'Área de jogadores',
+                    style: TextStyle(
+                      fontSize: 20,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+                  SizedBox(height: 6),
+                  Text(
+                    'Artilheiros, assistências, minutos, '
+                    'finalizações, cartões e outras estatísticas '
+                    'serão carregados pela API.',
+                    textAlign: TextAlign.center,
+                  ),
+                ],
+              ),
+            ),
+          ),
+          const SizedBox(height: 15),
+          _playerMetric('Gols'),
+          _playerMetric('Assistências'),
+          _playerMetric('Finalizações'),
+          _playerMetric('Chutes no gol'),
+          _playerMetric('Cartões'),
+        ],
+      ),
+    );
+  }
+
+  Widget _playerMetric(String title) {
+    return Card(
+      child: ListTile(
+        leading: const Icon(
+          Icons.person,
+          color: Colors.greenAccent,
+        ),
+        title: Text(title),
+        trailing: const Text(
+          'Aguardando API',
+          style: TextStyle(color: Colors.orange),
+        ),
+      ),
+    );
+  }
+}
