@@ -1,11 +1,37 @@
 import { Router } from "express";
 import { prisma } from "./prisma";
 import { footScore } from "./footScore";
+import { ExternalFootballProvider } from "./services/provider";
 
 const router = Router();
 
 router.get("/health", (_req, res) => {
-  res.json({ ok: true, service: "foot-analytics-api", version: "0.1.0" });
+  res.json({
+    ok: true,
+    service: "foot-analytics-api",
+    version: "0.1.0"
+  });
+});
+
+router.get("/test-provider", async (_req, res) => {
+  try {
+    const provider = new ExternalFootballProvider();
+
+    const teams = await provider.getTeams(71, 2026);
+
+    res.json({
+      ok: true,
+      count: teams.length,
+      teams,
+    });
+  } catch (error) {
+    console.error(error);
+
+    res.status(500).json({
+      ok: false,
+      error: error instanceof Error ? error.message : "Erro desconhecido",
+    });
+  }
 });
 
 router.get("/teams", async (_req, res) => {
