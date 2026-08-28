@@ -9,7 +9,7 @@ router.get("/health", (_req, res) => {
   res.json({
     ok: true,
     service: "foot-analytics-api",
-    version: "0.1.0"
+    version: "0.1.1"
   });
 });
 
