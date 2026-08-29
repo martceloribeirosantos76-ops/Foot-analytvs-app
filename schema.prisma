@@ -15,12 +15,16 @@ model Competition {
   matches  Match[]
 }
 
-model Season {
-  id           Int          @id @default(autoincrement())
-  name         String
-  competitionId Int
-  competition  Competition  @relation(fields: [competitionId], references: [id])
-  matches      Match[]
+model Team {
+  id          Int       @id @default(autoincrement())
+  externalId  Int       @unique
+  name        String
+  country     String?
+  logoUrl     String?
+  homeMatches Match[]   @relation("HomeTeam")
+  awayMatches Match[]   @relation("AwayTeam")
+  players     Player[]
+}
 }
 
 model Team {
