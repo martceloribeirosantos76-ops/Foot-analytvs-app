@@ -78,6 +78,131 @@ router.get("/import-teams", async (_req, res) => {
   }
 });
 
+router.get("/import-matches", async (_req, res) => {
+  try {
+    const provider = new ExternalFootballProvider();
+
+    const leagueId = 39;
+    const seasonYear = 2024;
+
+    const matches = await provider.getMatches(
+      leagueId,
+      seasonYear
+    );
+
+    const competition = await prisma.competition.upsert({
+      where: {
+        id: 1,
+      },
+      update: {
+        name: "Premier League",
+        country: "England",
+      },
+      create: {
+        name: "Premier League",
+        country: "England",
+      },
+    });
+
+    const season = await prisma.season.findFirst({
+      where: {
+        competitionId: competition.id,
+        name: String(seasonYear),
+      },
+    });
+
+    const savedSeason =
+      season ??
+      await prisma.season.create({
+        data: {
+          name: String(seasonYear),
+          competitionId: competition.id,
+        },
+      });
+
+    const importedMatches = [];
+
+    for (const match of matches) {
+      const homeTeam = await prisma.team.findUnique({
+        where: {
+          externalId: match.homeExternalId,
+        },
+      });
+
+      const awayTeam = await prisma.team.findUnique({
+        where: {
+          externalId: match.awayExternalId,
+        },
+      });
+
+      if (!homeTeam || !awayTeam) {
+        console.warn(
+          `Times não encontrados para a partida ${match.externalId}:`,
+          match.homeExternalId,
+          match.awayExternalId
+        );
+
+        continue;
+      }
+
+      const existingMatch = await prisma.match.findFirst({
+        where: {
+          kickoff: match.kickoff,
+          homeTeamId: homeTeam.id,
+          awayTeamId: awayTeam.id,
+        },
+      });
+
+      const savedMatch =
+        existingMatch ??
+        await prisma.match.create({
+          data: {
+            kickoff: match.kickoff,
+            status: match.status,
+            competitionId: competition.id,
+            seasonId: savedSeason.id,
+            homeTeamId: homeTeam.id,
+            awayTeamId: awayTeam.id,
+            homeScore: match.homeScore,
+            awayScore: match.awayScore,
+          },
+        });
+
+      if (existingMatch) {
+        const updatedMatch = await prisma.match.update({
+          where: {
+            id: existingMatch.id,
+          },
+          data: {
+            status: match.status,
+            homeScore: match.homeScore,
+            awayScore: match.awayScore,
+            competitionId: competition.id,
+            seasonId: savedSeason.id,
+          },
+        });
+
+        importedMatches.push(updatedMatch);
+      } else {
+        importedMatches.push(savedMatch);
+      }
+    }
+
+    res.json({
+      ok: true,
+      count: importedMatches.length,
+      matches: importedMatches,
+    });
+  } catch (error) {
+    console.error(error);
+
+    res.status(500).json({
+      ok: false,
+      error: error instanceof Error ? error.message : "Erro desconhecido",
+    });
+  }
+});
+
 router.get("/teams", async (_req, res) => {
   try {
     const teams = await prisma.team.findMany({
