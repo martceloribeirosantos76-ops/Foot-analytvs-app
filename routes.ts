@@ -6,7 +6,7 @@ import { ExternalFootballProvider } from "./provider";
 const router = Router();
 
 const LEAGUE_ID = 39;
-const SEASON_YEAR = 2024;
+const SEASON_YEAR = 2026;
 const COMPETITION_NAME = "Premier League";
 const COMPETITION_COUNTRY = "England";
 
