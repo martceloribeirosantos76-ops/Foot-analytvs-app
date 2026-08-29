@@ -17,7 +17,7 @@ router.get("/test-provider", async (_req, res) => {
   try {
     const provider = new ExternalFootballProvider();
 
-    const teams = await provider.getTeams(71, 2026);
+    const teams = await provider.getTeams(1, 2026);
 
     res.json({
       ok: true,
