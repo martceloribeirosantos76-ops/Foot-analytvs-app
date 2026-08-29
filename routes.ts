@@ -1,7 +1,7 @@
 import { Router } from "express";
 import { prisma } from "./prisma";
 import { footScore } from "./footScore";
-import { ExternalFootballProvider } from "./services/provider";
+import { ExternalFootballProvider } from "./provider";
 
 const router = Router();
 
