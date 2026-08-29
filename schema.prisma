@@ -16,11 +16,11 @@ model Competition {
 }
 
 model Season {
-  id           Int         @id @default(autoincrement())
-  name         String
+  id            Int         @id @default(autoincrement())
+  name          String
   competitionId Int
-  competition  Competition @relation(fields: [competitionId], references: [id])
-  matches      Match[]
+  competition   Competition @relation(fields: [competitionId], references: [id])
+  matches       Match[]
 }
 
 model Team {
@@ -45,6 +45,7 @@ model Player {
 
 model Match {
   id            Int             @id @default(autoincrement())
+  externalId    Int?            @unique
   kickoff       DateTime
   status        String
   competitionId Int
@@ -53,6 +54,7 @@ model Match {
   awayTeamId    Int
   homeScore     Int?
   awayScore     Int?
+
   competition   Competition     @relation(fields: [competitionId], references: [id])
   season        Season?         @relation(fields: [seasonId], references: [id])
   homeTeam      Team            @relation("HomeTeam", fields: [homeTeamId], references: [id])
