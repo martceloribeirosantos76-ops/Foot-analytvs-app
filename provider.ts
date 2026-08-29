@@ -217,9 +217,7 @@ export class ExternalFootballProvider
 
           possession:
             parsePercentage(
-              getValue(
-                "Ball Possession"
-              )
+              getValue("Ball Possession")
             ),
 
           xg:
