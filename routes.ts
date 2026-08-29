@@ -10,6 +10,11 @@ const SEASON_YEAR = 2024;
 const COMPETITION_NAME = "Premier League";
 const COMPETITION_COUNTRY = "England";
 
+// Quantidade máxima de partidas processadas por chamada.
+// O endpoint permite continuar por partes usando ?offset=0&limit=10
+const DEFAULT_LIMIT = 10;
+const MAX_LIMIT = 10;
+
 function getErrorMessage(error: unknown): string {
   return error instanceof Error
     ? error.message
@@ -231,12 +236,48 @@ router.get("/import-matches", async (_req, res) => {
 });
 
 /**
- * Importa estatísticas das partidas.
+ * Importa estatísticas em LOTES.
+ *
+ * Exemplos:
+ *
+ * /api/import-statistics
+ * -> importa as primeiras 10 partidas
+ *
+ * /api/import-statistics?offset=10&limit=10
+ * -> importa partidas 11 a 20
+ *
+ * /api/import-statistics?offset=20&limit=10
+ * -> importa partidas 21 a 30
+ *
+ * O limite máximo é 10 partidas por chamada.
  */
-router.get("/import-statistics", async (_req, res) => {
+router.get("/import-statistics", async (req, res) => {
   try {
+    const requestedOffset = Number(
+      req.query.offset ?? 0
+    );
+
+    const requestedLimit = Number(
+      req.query.limit ?? DEFAULT_LIMIT
+    );
+
+    const offset =
+      Number.isInteger(requestedOffset) &&
+      requestedOffset >= 0
+        ? requestedOffset
+        : 0;
+
+    const limit =
+      Number.isInteger(requestedLimit) &&
+      requestedLimit > 0
+        ? Math.min(requestedLimit, MAX_LIMIT)
+        : DEFAULT_LIMIT;
+
     const provider = new ExternalFootballProvider();
 
+    /**
+     * Busca todas as partidas do banco.
+     */
     const databaseMatches =
       await prisma.match.findMany({
         include: {
@@ -248,6 +289,36 @@ router.get("/import-statistics", async (_req, res) => {
         },
       });
 
+    const totalMatches =
+      databaseMatches.length;
+
+    const selectedMatches =
+      databaseMatches.slice(
+        offset,
+        offset + limit
+      );
+
+    /**
+     * Se já terminou todas as partidas.
+     */
+    if (selectedMatches.length === 0) {
+      return res.json({
+        ok: true,
+        message:
+          "Não existem mais partidas para processar.",
+        totalMatches,
+        offset,
+        limit,
+        processed: 0,
+        nextOffset: null,
+        finished: true,
+      });
+    }
+
+    /**
+     * Busca os fixtures externos uma única vez
+     * nesta execução.
+     */
     const externalMatches =
       await provider.getMatches(
         LEAGUE_ID,
@@ -266,8 +337,14 @@ router.get("/import-statistics", async (_req, res) => {
       error?: string;
     }> = [];
 
-    for (const match of databaseMatches) {
+    for (const match of selectedMatches) {
       try {
+        /**
+         * Localiza o fixture externo.
+         *
+         * Usamos os IDs externos dos times
+         * e uma tolerância de 24 horas.
+         */
         const externalMatch =
           externalMatches.find((item) => {
             const sameHomeTeam =
@@ -306,6 +383,10 @@ router.get("/import-statistics", async (_req, res) => {
           continue;
         }
 
+        /**
+         * Busca as estatísticas usando
+         * o ID verdadeiro do fixture.
+         */
         const statistics =
           await provider.getMatchStatistics(
             externalMatch.externalId
@@ -410,12 +491,37 @@ router.get("/import-statistics", async (_req, res) => {
       }
     }
 
+    const nextOffset =
+      offset + selectedMatches.length;
+
+    const finished =
+      nextOffset >= totalMatches;
+
     res.json({
       ok: true,
-      totalMatches: databaseMatches.length,
+
+      totalMatches,
+
+      offset,
+
+      limit,
+
+      processed:
+        selectedMatches.length,
+
       imported,
+
       skipped,
+
       errors,
+
+      nextOffset:
+        finished
+          ? null
+          : nextOffset,
+
+      finished,
+
       details,
     });
   } catch (error) {
