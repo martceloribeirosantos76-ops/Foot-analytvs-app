@@ -9,7 +9,7 @@ router.get("/health", (_req, res) => {
   res.json({
     ok: true,
     service: "foot-analytics-api",
-    version: "0.1.1"
+    version: "0.1.0"
   });
 });
 
@@ -34,23 +34,88 @@ router.get("/test-provider", async (_req, res) => {
   }
 });
 
+router.get("/import-teams", async (_req, res) => {
+  try {
+    const provider = new ExternalFootballProvider();
+
+    const teams = await provider.getTeams(39, 2024);
+
+    const importedTeams = [];
+
+    for (const team of teams) {
+      const savedTeam = await prisma.team.upsert({
+        where: {
+          externalId: team.externalId,
+        },
+        update: {
+          name: team.name,
+          country: team.country,
+          logoUrl: team.logoUrl,
+        },
+        create: {
+          externalId: team.externalId,
+          name: team.name,
+          country: team.country,
+          logoUrl: team.logoUrl,
+        },
+      });
+
+      importedTeams.push(savedTeam);
+    }
+
+    res.json({
+      ok: true,
+      count: importedTeams.length,
+      teams: importedTeams,
+    });
+  } catch (error) {
+    console.error(error);
+
+    res.status(500).json({
+      ok: false,
+      error: error instanceof Error ? error.message : "Erro desconhecido",
+    });
+  }
+});
+
 router.get("/teams", async (_req, res) => {
-  res.json(await prisma.team.findMany({ orderBy: { name: "asc" } }));
+  try {
+    const teams = await prisma.team.findMany({
+      orderBy: {
+        name: "asc",
+      },
+    });
+
+    res.json(teams);
+  } catch (error) {
+    console.error(error);
+
+    res.status(500).json({
+      ok: false,
+      error: error instanceof Error ? error.message : "Erro desconhecido",
+    });
+  }
 });
 
 router.get("/players", async (_req, res) => {
   res.json(
     await prisma.player.findMany({
       include: { team: true },
-      orderBy: { name: "asc" }
+      orderBy: { name: "asc" },
     })
   );
 });
 
 router.get("/matches", async (_req, res) => {
   const matches = await prisma.match.findMany({
-    include: { homeTeam: true, awayTeam: true, competition: true },
-    orderBy: { kickoff: "asc" }
+    include: {
+      homeTeam: true,
+      awayTeam: true,
+      competition: true,
+    },
+    orderBy: {
+      kickoff: "asc",
+    },
   });
 
   res.json(matches);
@@ -60,7 +125,9 @@ router.get("/matches/:id", async (req, res) => {
   const id = Number(req.params.id);
 
   if (!Number.isInteger(id)) {
-    return res.status(400).json({ error: "ID inválido" });
+    return res.status(400).json({
+      error: "ID inválido",
+    });
   }
 
   const match = await prisma.match.findUnique({
@@ -70,12 +137,14 @@ router.get("/matches/:id", async (req, res) => {
       awayTeam: true,
       competition: true,
       statistics: true,
-      analysis: true
-    }
+      analysis: true,
+    },
   });
 
   if (!match) {
-    return res.status(404).json({ error: "Partida não encontrada" });
+    return res.status(404).json({
+      error: "Partida não encontrada",
+    });
   }
 
   res.json(match);
@@ -84,17 +153,25 @@ router.get("/matches/:id", async (req, res) => {
 router.get("/matches/:id/analysis", async (req, res) => {
   const id = Number(req.params.id);
 
+  if (!Number.isInteger(id)) {
+    return res.status(400).json({
+      error: "ID inválido",
+    });
+  }
+
   const match = await prisma.match.findUnique({
     where: { id },
     include: {
       statistics: true,
       homeTeam: true,
-      awayTeam: true
-    }
+      awayTeam: true,
+    },
   });
 
   if (!match) {
-    return res.status(404).json({ error: "Partida não encontrada" });
+    return res.status(404).json({
+      error: "Partida não encontrada",
+    });
   }
 
   const home = match.statistics.find(
@@ -114,7 +191,7 @@ router.get("/matches/:id/analysis", async (req, res) => {
     creation: s?.passesAccuracy ?? 70,
     form: 70,
     efficiency: 70,
-    homeAway: 70
+    homeAway: 70,
   });
 
   const homeScore = footScore(toMetrics(home));
@@ -124,16 +201,16 @@ router.get("/matches/:id/analysis", async (req, res) => {
     matchId: id,
     home: {
       team: match.homeTeam.name,
-      footScore: homeScore
+      footScore: homeScore,
     },
     away: {
       team: match.awayTeam.name,
-      footScore: awayScore
+      footScore: awayScore,
     },
     summary:
       homeScore > awayScore
         ? `${match.homeTeam.name} apresenta maior índice estatístico no modelo atual.`
-        : `${match.awayTeam.name} apresenta maior índice estatístico no modelo atual.`
+        : `${match.awayTeam.name} apresenta maior índice estatístico no modelo atual.`,
   });
 });
 
