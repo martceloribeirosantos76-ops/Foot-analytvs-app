@@ -6,7 +6,7 @@ import { ExternalFootballProvider } from "./provider";
 const router = Router();
 
 const LEAGUE_ID = 39;
-const const SEASON_YEAR = 2024;
+const SEASON_YEAR = 2024;
 const COMPETITION_NAME = "Premier League";
 const COMPETITION_COUNTRY = "England";
 
@@ -171,12 +171,6 @@ router.get("/import-matches", async (_req, res) => {
         continue;
       }
 
-      /**
-       * O Match não possui externalId no schema.
-       *
-       * Portanto identificamos a partida por:
-       * data + time mandante + time visitante.
-       */
       const existingMatch =
         await prisma.match.findFirst({
           where: {
@@ -238,18 +232,11 @@ router.get("/import-matches", async (_req, res) => {
 
 /**
  * Importa estatísticas das partidas.
- *
- * Importante:
- * Primeiro buscamos todas as partidas externas UMA vez.
- * Depois fazemos o cruzamento com as partidas do banco.
  */
 router.get("/import-statistics", async (_req, res) => {
   try {
     const provider = new ExternalFootballProvider();
 
-    /**
-     * Busca as partidas existentes no banco.
-     */
     const databaseMatches =
       await prisma.match.findMany({
         include: {
@@ -261,9 +248,6 @@ router.get("/import-statistics", async (_req, res) => {
         },
       });
 
-    /**
-     * Busca todas as partidas da API apenas uma vez.
-     */
     const externalMatches =
       await provider.getMatches(
         LEAGUE_ID,
@@ -284,9 +268,6 @@ router.get("/import-statistics", async (_req, res) => {
 
     for (const match of databaseMatches) {
       try {
-        /**
-         * Localiza a partida externa pelos times e horário.
-         */
         const externalMatch =
           externalMatches.find((item) => {
             const sameHomeTeam =
@@ -325,10 +306,6 @@ router.get("/import-statistics", async (_req, res) => {
           continue;
         }
 
-        /**
-         * Agora buscamos as estatísticas
-         * usando o ID real do fixture externo.
-         */
         const statistics =
           await provider.getMatchStatistics(
             externalMatch.externalId
@@ -657,9 +634,6 @@ router.get(
             ? `${match.awayTeam.name} apresenta maior índice estatístico no modelo atual.`
             : "As duas equipes apresentam índices estatísticos equivalentes no modelo atual.";
 
-      /**
-       * Salva/atualiza a análise no banco.
-       */
       const analysis =
         await prisma.analysis.upsert({
           where: {
