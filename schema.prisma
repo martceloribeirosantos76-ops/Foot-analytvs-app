@@ -15,6 +15,14 @@ model Competition {
   matches  Match[]
 }
 
+model Season {
+  id           Int         @id @default(autoincrement())
+  name         String
+  competitionId Int
+  competition  Competition @relation(fields: [competitionId], references: [id])
+  matches      Match[]
+}
+
 model Team {
   id          Int       @id @default(autoincrement())
   externalId  Int       @unique
@@ -24,30 +32,19 @@ model Team {
   homeMatches Match[]   @relation("HomeTeam")
   awayMatches Match[]   @relation("AwayTeam")
   players     Player[]
-
-}
-
-model Team {
-  id          Int       @id @default(autoincrement())
-  name        String
-  country     String?
-  logoUrl     String?
-  homeMatches Match[]   @relation("HomeTeam")
-  awayMatches Match[]   @relation("AwayTeam")
-  players     Player[]
 }
 
 model Player {
-  id        Int      @id @default(autoincrement())
+  id        Int              @id @default(autoincrement())
   name      String
   position  String?
   teamId    Int?
-  team      Team?    @relation(fields: [teamId], references: [id])
+  team      Team?            @relation(fields: [teamId], references: [id])
   stats     PlayerStatistic[]
 }
 
 model Match {
-  id            Int       @id @default(autoincrement())
+  id            Int             @id @default(autoincrement())
   kickoff       DateTime
   status        String
   competitionId Int
@@ -56,50 +53,50 @@ model Match {
   awayTeamId    Int
   homeScore     Int?
   awayScore     Int?
-  competition   Competition @relation(fields: [competitionId], references: [id])
-  season        Season?     @relation(fields: [seasonId], references: [id])
-  homeTeam      Team         @relation("HomeTeam", fields: [homeTeamId], references: [id])
-  awayTeam      Team         @relation("AwayTeam", fields: [awayTeamId], references: [id])
+  competition   Competition     @relation(fields: [competitionId], references: [id])
+  season        Season?         @relation(fields: [seasonId], references: [id])
+  homeTeam      Team            @relation("HomeTeam", fields: [homeTeamId], references: [id])
+  awayTeam      Team            @relation("AwayTeam", fields: [awayTeamId], references: [id])
   statistics    MatchStatistic[]
   analysis      Analysis?
 }
 
 model MatchStatistic {
-  id              Int    @id @default(autoincrement())
-  matchId         Int
-  teamId          Int
-  possession      Float?
-  xg              Float?
-  shots           Int?
-  shotsOnTarget   Int?
-  passesAccuracy  Float?
-  corners         Int?
-  fouls           Int?
-  yellowCards     Int?
-  redCards        Int?
-  match           Match  @relation(fields: [matchId], references: [id])
+  id             Int    @id @default(autoincrement())
+  matchId        Int
+  teamId         Int
+  possession     Float?
+  xg             Float?
+  shots          Int?
+  shotsOnTarget  Int?
+  passesAccuracy Float?
+  corners        Int?
+  fouls          Int?
+  yellowCards    Int?
+  redCards       Int?
+  match          Match  @relation(fields: [matchId], references: [id])
 }
 
 model PlayerStatistic {
-  id            Int    @id @default(autoincrement())
-  playerId      Int
-  matchId       Int?
-  minutes       Int?
-  goals         Int?
-  assists       Int?
-  xg            Float?
-  xa            Float?
-  shots         Int?
-  keyPasses     Int?
-  tackles       Int?
-  player        Player @relation(fields: [playerId], references: [id])
+  id         Int    @id @default(autoincrement())
+  playerId   Int
+  matchId    Int?
+  minutes    Int?
+  goals      Int?
+  assists    Int?
+  xg         Float?
+  xa         Float?
+  shots      Int?
+  keyPasses  Int?
+  tackles    Int?
+  player     Player @relation(fields: [playerId], references: [id])
 }
 
 model Analysis {
-  id          Int      @id @default(autoincrement())
-  matchId     Int      @unique
-  homeScore   Float
-  awayScore   Float
-  summary     String
-  match       Match    @relation(fields: [matchId], references: [id])
+  id        Int     @id @default(autoincrement())
+  matchId   Int     @unique
+  homeScore Float
+  awayScore Float
+  summary   String
+  match     Match   @relation(fields: [matchId], references: [id])
 }
