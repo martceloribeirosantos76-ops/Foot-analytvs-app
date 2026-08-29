@@ -42,7 +42,8 @@ export class ExternalFootballProvider implements FootballDataProvider {
     }
 
     const data = await response.json();
-
+    
+console.log("API-FOOTBALL RESPONSE:", JSON.stringify(data));
     return (data.response ?? []).map((item: any) => ({
       externalId: item.team.id,
       name: item.team.name,
