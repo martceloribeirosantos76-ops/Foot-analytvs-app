@@ -35,15 +35,29 @@ export class ExternalFootballProvider implements FootballDataProvider {
       },
     });
 
+    const data = await response.json();
+
+    console.log("API-FOOTBALL STATUS:", response.status);
+    console.log(
+      "API-FOOTBALL DATA:",
+      JSON.stringify(data)
+    );
+
     if (!response.ok) {
       throw new Error(
         `API-Football respondeu HTTP ${response.status}`
       );
     }
 
-    const data = await response.json();
-    
-console.log("API-FOOTBALL RESPONSE:", JSON.stringify(data));
+    if (
+      data.errors &&
+      Object.keys(data.errors).length > 0
+    ) {
+      throw new Error(
+        `API-Football retornou erro: ${JSON.stringify(data.errors)}`
+      );
+    }
+
     return (data.response ?? []).map((item: any) => ({
       externalId: item.team.id,
       name: item.team.name,
