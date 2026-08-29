@@ -297,17 +297,7 @@ router.get(
 /**
  * Importa estatísticas em lotes.
  *
- * O limite máximo continua sendo 10 partidas
- * por chamada, para respeitar a API gratuita.
- *
- * Exemplos:
- *
- * /api/import-statistics?offset=0&limit=10
- * /api/import-statistics?offset=10&limit=10
- * /api/import-statistics?offset=20&limit=10
- *
- * A API gratuita possui limite de requisições.
- * Por isso fazemos uma pausa entre as partidas.
+ * Limite máximo: 10 partidas por chamada.
  */
 router.get(
   "/import-statistics",
@@ -332,9 +322,6 @@ router.get(
           ? parsedLimit
           : 10;
 
-      /**
-       * Busca somente o lote atual.
-       */
       const databaseMatches =
         await prisma.match.findMany({
           include: {
@@ -348,16 +335,9 @@ router.get(
           take: limit,
         });
 
-      /**
-       * Total de partidas existentes.
-       */
       const totalMatches =
         await prisma.match.count();
 
-      /**
-       * Se não houver mais partidas,
-       * terminamos a importação.
-       */
       if (databaseMatches.length === 0) {
         return res.json({
           ok: true,
@@ -377,10 +357,6 @@ router.get(
       const provider =
         new ExternalFootballProvider();
 
-      /**
-       * Busca todas as partidas externas
-       * apenas uma vez neste lote.
-       */
       const externalMatches =
         await provider.getMatches(
           LEAGUE_ID,
@@ -408,10 +384,6 @@ router.get(
           databaseMatches[index];
 
         try {
-          /**
-           * Se já temos o externalId salvo,
-           * usamos diretamente.
-           */
           let externalMatch =
             match.externalId
               ? externalMatches.find(
@@ -421,10 +393,6 @@ router.get(
                 )
               : undefined;
 
-          /**
-           * Compatibilidade com as partidas antigas
-           * que ainda possuem externalId nulo.
-           */
           if (!externalMatch) {
             externalMatch =
               externalMatches.find(
@@ -471,9 +439,6 @@ router.get(
             continue;
           }
 
-          /**
-           * Salva o ID externo caso ainda esteja vazio.
-           */
           if (
             match.externalId !==
             externalMatch.externalId
@@ -489,12 +454,6 @@ router.get(
             });
           }
 
-          /**
-           * Pausa entre chamadas para evitar
-           * rate limit da API gratuita.
-           *
-           * Não esperamos antes da primeira chamada.
-           */
           if (index > 0) {
             await sleep(7000);
           }
@@ -570,20 +529,16 @@ router.get(
             };
 
             if (existing) {
-              await prisma.matchStatistic.update(
-                {
-                  where: {
-                    id: existing.id,
-                  },
-                  data,
-                }
-              );
+              await prisma.matchStatistic.update({
+                where: {
+                  id: existing.id,
+                },
+                data,
+              });
             } else {
-              await prisma.matchStatistic.create(
-                {
-                  data,
-                }
-              );
+              await prisma.matchStatistic.create({
+                data,
+              });
             }
           }
 
@@ -612,25 +567,15 @@ router.get(
             error
           );
 
-          /**
-           * Se a API informar rate limit,
-           * esperamos mais tempo antes de continuar.
-           */
           const message =
             getErrorMessage(
               error
             ).toLowerCase();
 
           if (
-            message.includes(
-              "ratelimit"
-            ) ||
-            message.includes(
-              "too many requests"
-            ) ||
-            message.includes(
-              "per-minute"
-            )
+            message.includes("ratelimit") ||
+            message.includes("too many requests") ||
+            message.includes("per-minute")
           ) {
             console.log(
               "Rate limit detectado. Aguardando 30 segundos..."
@@ -660,6 +605,371 @@ router.get(
         errors,
         nextOffset,
         finished,
+        details,
+      });
+    } catch (error) {
+      console.error(error);
+
+      res.status(500).json({
+        ok: false,
+        error: getErrorMessage(error),
+      });
+    }
+  }
+);
+
+/**
+ * IMPORT 40
+ *
+ * Importa até 40 partidas que ainda NÃO possuem
+ * estatísticas.
+ *
+ * As partidas que já possuem estatísticas são
+ * preservadas e não entram no lote.
+ */
+router.get(
+  "/import-statistics-40",
+  async (_req, res) => {
+    try {
+      /**
+       * Quantidade de partidas com estatísticas
+       * antes do lote.
+       */
+      const beforeCount =
+        await prisma.match.count({
+          where: {
+            statistics: {
+              some: {},
+            },
+          },
+        });
+
+      /**
+       * Total de partidas no banco.
+       */
+      const totalMatches =
+        await prisma.match.count();
+
+      /**
+       * Seleciona somente partidas sem estatísticas.
+       * Máximo de 40.
+       */
+      const databaseMatches =
+        await prisma.match.findMany({
+          where: {
+            statistics: {
+              none: {},
+            },
+          },
+          include: {
+            homeTeam: true,
+            awayTeam: true,
+          },
+          orderBy: {
+            kickoff: "asc",
+          },
+          take: 40,
+        });
+
+      /**
+       * Nada pendente.
+       */
+      if (databaseMatches.length === 0) {
+        return res.json({
+          ok: true,
+          beforeCount,
+          afterCount: beforeCount,
+          imported: 0,
+          remaining:
+            totalMatches - beforeCount,
+          errors: 0,
+          processed: 0,
+          details: [],
+        });
+      }
+
+      const provider =
+        new ExternalFootballProvider();
+
+      /**
+       * Busca os fixtures externos uma única vez.
+       */
+      const externalMatches =
+        await provider.getMatches(
+          LEAGUE_ID,
+          SEASON_YEAR
+        );
+
+      let imported = 0;
+      let errors = 0;
+
+      const details: Array<{
+        matchId: number;
+        externalFixtureId?: number;
+        status: string;
+        statistics?: number;
+        error?: string;
+      }> = [];
+
+      for (
+        let index = 0;
+        index < databaseMatches.length;
+        index++
+      ) {
+        const match =
+          databaseMatches[index];
+
+        try {
+          /**
+           * Primeiro tenta localizar pelo externalId.
+           */
+          let externalMatch =
+            match.externalId
+              ? externalMatches.find(
+                  (item) =>
+                    item.externalId ===
+                    match.externalId
+                )
+              : undefined;
+
+          /**
+           * Compatibilidade com partidas antigas
+           * que não possuem externalId.
+           */
+          if (!externalMatch) {
+            externalMatch =
+              externalMatches.find(
+                (item) => {
+                  const sameHomeTeam =
+                    item.homeExternalId ===
+                    match.homeTeam.externalId;
+
+                  const sameAwayTeam =
+                    item.awayExternalId ===
+                    match.awayTeam.externalId;
+
+                  const timeDifference =
+                    Math.abs(
+                      item.kickoff.getTime() -
+                        match.kickoff.getTime()
+                    );
+
+                  const sameDate =
+                    timeDifference <
+                    24 *
+                      60 *
+                      60 *
+                      1000;
+
+                  return (
+                    sameHomeTeam &&
+                    sameAwayTeam &&
+                    sameDate
+                  );
+                }
+              );
+          }
+
+          if (!externalMatch) {
+            errors++;
+
+            details.push({
+              matchId: match.id,
+              status:
+                "fixture-not-found",
+              error:
+                "Partida não encontrada na API externa.",
+            });
+
+            continue;
+          }
+
+          /**
+           * Salva externalId caso esteja vazio.
+           */
+          if (
+            match.externalId !==
+            externalMatch.externalId
+          ) {
+            await prisma.match.update({
+              where: {
+                id: match.id,
+              },
+              data: {
+                externalId:
+                  externalMatch.externalId,
+              },
+            });
+          }
+
+          /**
+           * Pausa de 7 segundos entre chamadas.
+           * A primeira chamada não espera.
+           */
+          if (index > 0) {
+            await sleep(7000);
+          }
+
+          const statistics =
+            await provider.getMatchStatistics(
+              externalMatch.externalId
+            );
+
+          /**
+           * Se não houver estatísticas,
+           * a partida continua pendente.
+           */
+          if (
+            !statistics ||
+            statistics.length === 0
+          ) {
+            details.push({
+              matchId: match.id,
+              externalFixtureId:
+                externalMatch.externalId,
+              status: "no-statistics",
+            });
+
+            continue;
+          }
+
+          /**
+           * Salva as estatísticas.
+           */
+          for (const statistic of statistics) {
+            const team =
+              await prisma.team.findUnique({
+                where: {
+                  externalId:
+                    statistic.teamExternalId,
+                },
+              });
+
+            if (!team) {
+              console.warn(
+                `Time não encontrado: ${statistic.teamExternalId}`
+              );
+
+              continue;
+            }
+
+            const existing =
+              await prisma.matchStatistic.findFirst(
+                {
+                  where: {
+                    matchId: match.id,
+                    teamId: team.id,
+                  },
+                }
+              );
+
+            const data = {
+              matchId: match.id,
+              teamId: team.id,
+              possession:
+                statistic.possession,
+              xg: statistic.xg,
+              shots:
+                statistic.shots,
+              shotsOnTarget:
+                statistic.shotsOnTarget,
+              passesAccuracy:
+                statistic.passesAccuracy,
+              corners:
+                statistic.corners,
+              fouls:
+                statistic.fouls,
+              yellowCards:
+                statistic.yellowCards,
+              redCards:
+                statistic.redCards,
+            };
+
+            if (existing) {
+              await prisma.matchStatistic.update({
+                where: {
+                  id: existing.id,
+                },
+                data,
+              });
+            } else {
+              await prisma.matchStatistic.create({
+                data,
+              });
+            }
+          }
+
+          imported++;
+
+          details.push({
+            matchId: match.id,
+            externalFixtureId:
+              externalMatch.externalId,
+            status: "imported",
+            statistics:
+              statistics.length,
+          });
+        } catch (error) {
+          errors++;
+
+          details.push({
+            matchId: match.id,
+            status: "error",
+            error:
+              getErrorMessage(error),
+          });
+
+          console.error(
+            `Erro nas estatísticas da partida ${match.id}:`,
+            error
+          );
+
+          /**
+           * Rate limit.
+           */
+          const message =
+            getErrorMessage(
+              error
+            ).toLowerCase();
+
+          if (
+            message.includes("ratelimit") ||
+            message.includes("too many requests") ||
+            message.includes("per-minute")
+          ) {
+            console.log(
+              "Rate limit detectado. Aguardando 30 segundos..."
+            );
+
+            await sleep(30000);
+          }
+        }
+      }
+
+      /**
+       * Conta novamente depois do processamento.
+       */
+      const afterCount =
+        await prisma.match.count({
+          where: {
+            statistics: {
+              some: {},
+            },
+          },
+        });
+
+      const remaining =
+        totalMatches - afterCount;
+
+      res.json({
+        ok: true,
+        beforeCount,
+        afterCount,
+        imported,
+        remaining,
+        errors,
+        processed:
+          databaseMatches.length,
         details,
       });
     } catch (error) {
