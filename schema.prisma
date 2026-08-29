@@ -24,7 +24,7 @@ model Team {
   homeMatches Match[]   @relation("HomeTeam")
   awayMatches Match[]   @relation("AwayTeam")
   players     Player[]
-}
+
 }
 
 model Team {
